@@ -56,6 +56,8 @@ Errors are always structured and never 500:
 | Condition | HTTP | code |
 |---|---|---|
 | Missing / blank / hostless URL | 422 | `INVALID_URL` |
+| Malformed request body (no `url`, wrong type) | 422 | `INVALID_REQUEST` |
+| Unexpected server error | 500 | `INTERNAL_ERROR` |
 | Non-http(s) scheme | 400 | `BLOCKED_SCHEME` |
 | Private / loopback / reserved host | 400 | `BLOCKED_HOST` |
 | DNS / connection / TLS failure | 502 | `FETCH_FAILED` |
