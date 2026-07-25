@@ -65,3 +65,15 @@ def test_timeout_returns_504(monkeypatch):
     monkeypatch.setattr(fetcher, "fetch", boom)
     r = client.post("/api/audit", json={"url": "https://slow.example"})
     assert r.status_code == 504
+
+
+def test_malformed_body_returns_envelope():
+    r = client.post("/api/audit", json={})
+    assert r.status_code == 422
+    assert r.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_wrong_type_url_returns_envelope():
+    r = client.post("/api/audit", json={"url": 123})
+    assert r.status_code == 422
+    assert r.json()["error"]["code"] == "INVALID_REQUEST"

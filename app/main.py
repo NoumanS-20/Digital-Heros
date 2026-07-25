@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 
 from app import auditor, fetcher, scoring
@@ -19,6 +20,32 @@ async def audit_error_handler(request: Request, exc: fetcher.AuditError):
     return JSONResponse(
         status_code=exc.http_status,
         content={"error": {"code": exc.code, "message": exc.message}},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": {
+                "code": "INVALID_REQUEST",
+                "message": "Request body is invalid — expected JSON with a 'url' string.",
+            }
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def unexpected_error_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": "An unexpected error occurred while auditing the page.",
+            }
+        },
     )
 
 
