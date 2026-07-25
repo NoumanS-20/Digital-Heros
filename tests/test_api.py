@@ -77,3 +77,11 @@ def test_wrong_type_url_returns_envelope():
     r = client.post("/api/audit", json={"url": 123})
     assert r.status_code == 422
     assert r.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_index_served_with_footer_credit():
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "Built for Digital Heroes Training Task" in r.text
+    assert "https://digitalheroesco.com" in r.text
+    assert 'id="f"' in r.text  # the audit form is present
