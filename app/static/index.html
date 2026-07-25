@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Page Pulse — URL Auditor</title>
+  <style>
+    :root { --bg:#0f1220; --card:#191d2e; --fg:#e8ebf5; --muted:#9aa3c0;
+            --line:#2a3050; --hi:#ff5c7a; --med:#ffb547; --low:#8b93b8; --accent:#5b8cff; }
+    * { box-sizing:border-box; }
+    body { margin:0; font:16px/1.5 system-ui,Segoe UI,Roboto,sans-serif;
+           background:var(--bg); color:var(--fg); }
+    .wrap { max-width:760px; margin:0 auto; padding:40px 20px 80px; }
+    h1 { font-size:28px; margin:0 0 4px; }
+    p.sub { color:var(--muted); margin:0 0 28px; }
+    form { display:flex; gap:8px; }
+    input { flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--line);
+            background:var(--card); color:var(--fg); font-size:15px; }
+    button { padding:12px 20px; border:0; border-radius:10px; background:var(--accent);
+             color:#fff; font-weight:600; cursor:pointer; }
+    button:disabled { opacity:.5; cursor:default; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px;
+            padding:20px; margin-top:22px; }
+    .hidden { display:none; }
+    .scoreRow { display:flex; align-items:center; gap:20px; }
+    .badge { width:88px; height:88px; border-radius:50%; display:flex; align-items:center;
+             justify-content:center; font-size:34px; font-weight:700; flex:0 0 auto; }
+    .gradeA{background:#12351f;color:#4ade80}.gradeB{background:#123528;color:#34d399}
+    .gradeC{background:#33300f;color:#facc15}.gradeD{background:#3a230f;color:#fb923c}
+    .gradeF{background:#3a1220;color:#f87171}
+    .subscores{display:flex;gap:18px;color:var(--muted);font-size:14px;flex-wrap:wrap}
+    .subscores b{color:var(--fg)}
+    table{width:100%;border-collapse:collapse;margin-top:6px;font-size:14px}
+    td{padding:8px 4px;border-bottom:1px solid var(--line)}
+    td:first-child{color:var(--muted)}
+    td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+    ul.fixes{list-style:none;padding:0;margin:6px 0 0}
+    ul.fixes li{padding:10px 12px;border-radius:10px;background:#12162a;margin-bottom:8px;
+                border-left:4px solid var(--low)}
+    li.high{border-left-color:var(--hi)} li.medium{border-left-color:var(--med)}
+    .sev{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+    .err{color:var(--hi)}
+    footer{margin-top:48px;text-align:center;color:var(--muted);font-size:13px}
+    footer a{color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Page Pulse</h1>
+    <p class="sub">Audit any URL for SEO, accessibility, and speed signals.</p>
+    <form id="f">
+      <input id="url" type="text" placeholder="https://example.com" autocomplete="off" required>
+      <button id="go" type="submit">Audit</button>
+    </form>
+
+    <div id="error" class="card err hidden"></div>
+
+    <div id="result" class="card hidden">
+      <div class="scoreRow">
+        <div id="badge" class="badge"></div>
+        <div>
+          <div style="font-size:20px;font-weight:600"><span id="overall"></span>/100</div>
+          <div class="subscores">
+            <span>SEO <b id="s_seo"></b></span>
+            <span>Accessibility <b id="s_a11y"></b></span>
+            <span>Performance <b id="s_perf"></b></span>
+          </div>
+        </div>
+      </div>
+      <table>
+        <tr><td>Final URL</td><td id="m_url"></td></tr>
+        <tr><td>HTTP status</td><td id="m_status"></td></tr>
+        <tr><td>Response time</td><td id="m_rt"></td></tr>
+        <tr><td>Title</td><td id="m_title"></td></tr>
+        <tr><td>Meta description</td><td id="m_desc"></td></tr>
+        <tr><td>H1 count</td><td id="m_h1"></td></tr>
+        <tr><td>Images missing alt</td><td id="m_alt"></td></tr>
+        <tr><td>Word count</td><td id="m_words"></td></tr>
+      </table>
+      <h3 id="fixTitle" style="margin:18px 0 4px">Prioritized fixes</h3>
+      <ul id="fixes" class="fixes"></ul>
+    </div>
+
+    <footer>
+      <a href="https://digitalheroesco.com" target="_blank" rel="noopener">Built for Digital Heroes Training Task</a>
+    </footer>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const form = $("f"), errBox = $("error"), result = $("result"), go = $("go");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errBox.classList.add("hidden");
+      result.classList.add("hidden");
+      go.disabled = true; go.textContent = "Auditing…";
+      try {
+        const res = await fetch("/api/audit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: $("url").value }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          const msg = (data.error && data.error.message) || "Something went wrong.";
+          errBox.textContent = msg;
+          errBox.classList.remove("hidden");
+        } else {
+          render(data);
+        }
+      } catch (_) {
+        errBox.textContent = "Network error — could not reach the auditor.";
+        errBox.classList.remove("hidden");
+      } finally {
+        go.disabled = false; go.textContent = "Audit";
+      }
+    });
+
+    function render(d) {
+      const m = d.metrics, s = d.score;
+      const badge = $("badge");
+      badge.textContent = s.grade;
+      badge.className = "badge grade" + s.grade;
+      $("overall").textContent = s.overall;
+      $("s_seo").textContent = s.breakdown.seo;
+      $("s_a11y").textContent = s.breakdown.accessibility;
+      $("s_perf").textContent = s.breakdown.performance;
+      $("m_url").textContent = d.final_url;
+      $("m_status").textContent = m.http_status;
+      $("m_rt").textContent = m.response_time_ms + " ms";
+      $("m_title").textContent = m.title || "— none —";
+      $("m_desc").textContent = m.meta_description || "— none —";
+      $("m_h1").textContent = m.h1_count;
+      $("m_alt").textContent = m.images_missing_alt + " / " + m.images_total;
+      $("m_words").textContent = m.word_count;
+      const ul = $("fixes"); ul.innerHTML = "";
+      if (!d.fixes.length) {
+        $("fixTitle").textContent = "No issues found 🎉";
+      } else {
+        $("fixTitle").textContent = "Prioritized fixes";
+        for (const f of d.fixes) {
+          const li = document.createElement("li");
+          li.className = f.severity;
+          li.innerHTML = '<div class="sev">' + f.severity + ' · ' + f.area +
+                         '</div>' + f.message;
+          ul.appendChild(li);
+        }
+      }
+      result.classList.remove("hidden");
+    }
+  </script>
+</body>
+</html>
