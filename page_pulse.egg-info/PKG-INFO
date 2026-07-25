@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: page-pulse
+Version: 0.1.0
+Summary: A small web tool that audits URLs and returns performance and SEO metrics.
+Requires-Python: >=3.12
+Requires-Dist: fastapi==0.115.6
+Requires-Dist: uvicorn[standard]==0.32.1
+Requires-Dist: httpx==0.28.1
+Requires-Dist: beautifulsoup4==4.12.3
+Requires-Dist: lxml==5.3.0

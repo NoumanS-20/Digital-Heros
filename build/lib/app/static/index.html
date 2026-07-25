@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Page Pulse — URL Vitals</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper:#ffffff;
+      --ink:#17181b;
+      --muted:#6b7280;
+      --faint:#9aa1ac;
+      --hairline:#ececec;
+      --track:#efefef;
+      --accent:#178a4e;          /* overridden per-grade */
+      --display:"Space Grotesk", "Segoe UI", system-ui, sans-serif;
+      --mono:ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+      --sans:system-ui, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing:border-box; }
+    html { -webkit-text-size-adjust:100%; }
+    body {
+      margin:0; background:var(--paper); color:var(--ink);
+      font-family:var(--sans);
+      -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    }
+    .wrap { max-width:560px; margin:0 auto; padding:72px 24px 96px; }
+
+    /* ---- header ---- */
+    .eyebrow {
+      font-family:var(--mono); font-size:11px; letter-spacing:.22em;
+      text-transform:uppercase; color:var(--faint);
+    }
+    .wordmark {
+      font-family:var(--display); font-weight:600; font-size:32px;
+      letter-spacing:-.02em; margin:6px 0 0; line-height:1;
+    }
+    .lede { color:var(--muted); font-size:15px; margin:14px 0 0; max-width:42ch; }
+
+    /* ---- query line ---- */
+    form { display:flex; align-items:baseline; gap:14px; margin-top:34px; }
+    .field {
+      flex:1; min-width:0; border:0; border-bottom:1.5px solid var(--ink);
+      background:transparent; color:var(--ink); font-family:var(--display);
+      font-size:19px; padding:8px 2px; letter-spacing:-.01em;
+    }
+    .field::placeholder { color:var(--faint); }
+    .field:focus { outline:none; border-bottom-color:var(--accent); }
+    button {
+      font-family:var(--mono); font-size:13px; letter-spacing:.02em;
+      color:var(--paper); background:var(--ink); border:0; border-radius:999px;
+      padding:11px 22px; cursor:pointer; white-space:nowrap; transition:opacity .15s;
+    }
+    button:hover { opacity:.82; }
+    button:disabled { opacity:.4; cursor:default; }
+    :focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:2px; }
+
+    .hidden { display:none !important; }
+
+    /* ---- error ---- */
+    .error {
+      margin-top:36px; padding-top:22px; border-top:1px solid var(--hairline);
+      display:flex; gap:14px; align-items:flex-start;
+    }
+    .error .tag {
+      font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase;
+      color:#c0392b; border:1px solid #e7c3bd; border-radius:4px; padding:3px 7px; flex:0 0 auto;
+    }
+    .error p { margin:2px 0 0; font-size:15px; color:var(--ink); }
+
+    /* ---- report ---- */
+    .report { margin-top:44px; }
+    .report.reveal { animation:rise .5s cubic-bezier(.2,.7,.2,1) both; }
+    @keyframes rise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+
+    /* vitals strip = the signature */
+    .vitals {
+      display:grid; grid-template-columns:auto 1fr; gap:38px; align-items:center;
+      padding-bottom:30px; border-bottom:1px solid var(--hairline);
+    }
+    .grade { display:flex; flex-direction:column; line-height:1; }
+    .grade-letter { font-family:var(--display); font-weight:600; font-size:66px; color:var(--accent); letter-spacing:-.03em; }
+    .grade-num { font-family:var(--display); font-weight:600; font-size:34px; color:var(--ink); margin-top:10px; letter-spacing:-.015em; line-height:1; }
+    .grade-num i { color:var(--faint); font-style:normal; font-size:18px; font-weight:500; }
+
+    .meters { display:flex; flex-direction:column; gap:16px; }
+    .meter { display:grid; grid-template-columns:96px 1fr 34px; align-items:center; gap:14px; }
+    .meter-label { font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+    .bar { height:3px; background:var(--track); border-radius:3px; overflow:hidden; }
+    .bar i { display:block; height:100%; width:0; background:var(--accent); transition:width .7s cubic-bezier(.2,.7,.2,1); }
+    .meter-val { font-family:var(--mono); font-size:13px; text-align:right; color:var(--ink); font-variant-numeric:tabular-nums; }
+
+    /* metrics = lab panel */
+    .metrics { margin:0; padding:28px 0; border-bottom:1px solid var(--hairline); }
+    .metrics .row { display:grid; grid-template-columns:150px 1fr; gap:16px; padding:7px 0; align-items:baseline; }
+    .metrics dt { font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:0; }
+    .metrics dd { font-family:var(--mono); font-size:13px; color:var(--ink); margin:0; word-break:break-word; font-variant-numeric:tabular-nums; }
+    .metrics dd.empty { color:var(--faint); }
+
+    /* prescription = fixes */
+    .fixes-head { font-family:var(--mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--faint); margin:26px 0 14px; }
+    ul.fixes { list-style:none; margin:0; padding:0; }
+    ul.fixes li { display:grid; grid-template-columns:104px 1fr; gap:20px; align-items:baseline; padding:13px 0; border-top:1px solid var(--hairline); }
+    ul.fixes li:first-child { border-top:0; }
+    .fix-meta { display:flex; flex-direction:column; gap:5px; }
+    .sev { font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
+    .sev.high { color:#c0392b; }
+    .sev.medium { color:#b7791f; }
+    .sev.low { color:var(--faint); }
+    .fix-area { font-family:var(--mono); font-size:10.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); }
+    .fix-msg { font-family:var(--sans); font-size:14px; line-height:1.55; color:var(--ink); }
+    .allclear { font-family:var(--sans); font-size:14px; color:#178a4e; padding-top:4px; }
+
+    /* grade → accent */
+    .report[data-grade="A"], .report[data-grade="B"] { --accent:#178a4e; }
+    .report[data-grade="C"] { --accent:#b7791f; }
+    .report[data-grade="D"], .report[data-grade="F"] { --accent:#c0392b; }
+
+    /* footer */
+    footer { margin-top:56px; padding-top:20px; border-top:1px solid var(--hairline); }
+    footer a { font-family:var(--mono); font-size:11px; letter-spacing:.06em; color:var(--faint); text-decoration:none; }
+    footer a:hover { color:var(--muted); }
+
+    @media (max-width:480px) {
+      .wrap { padding:48px 20px 72px; }
+      .vitals { grid-template-columns:1fr; gap:26px; }
+      .metrics .row { grid-template-columns:1fr; gap:2px; }
+      .metrics dd { font-size:13px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition:none !important; animation:none !important; }
+      .bar i { transition:none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="eyebrow">URL Vitals</div>
+      <h1 class="wordmark">Page Pulse</h1>
+      <p class="lede">Paste a link. It reads the page's SEO, accessibility, and speed vitals, then tells you what to fix first.</p>
+    </header>
+
+    <form id="f">
+      <input id="url" class="field" type="text" inputmode="url" autocomplete="off"
+             placeholder="https://example.com" aria-label="URL to audit" required>
+      <button id="go" type="submit">Audit</button>
+    </form>
+
+    <section id="error" class="error hidden" role="alert">
+      <span class="tag">Error</span>
+      <p id="errorMsg"></p>
+    </section>
+
+    <section id="result" class="report hidden" aria-live="polite">
+      <div class="vitals">
+        <div class="grade">
+          <span class="grade-letter" id="grade"></span>
+          <span class="grade-num"><span id="overall"></span><i>/100</i></span>
+        </div>
+        <div class="meters">
+          <div class="meter">
+            <span class="meter-label">SEO</span>
+            <span class="bar"><i id="bar_seo"></i></span>
+            <span class="meter-val" id="s_seo"></span>
+          </div>
+          <div class="meter">
+            <span class="meter-label">Access</span>
+            <span class="bar"><i id="bar_a11y"></i></span>
+            <span class="meter-val" id="s_a11y"></span>
+          </div>
+          <div class="meter">
+            <span class="meter-label">Speed</span>
+            <span class="bar"><i id="bar_perf"></i></span>
+            <span class="meter-val" id="s_perf"></span>
+          </div>
+        </div>
+      </div>
+
+      <dl class="metrics">
+        <div class="row"><dt>Final URL</dt><dd id="m_url"></dd></div>
+        <div class="row"><dt>HTTP status</dt><dd id="m_status"></dd></div>
+        <div class="row"><dt>Response time</dt><dd id="m_rt"></dd></div>
+        <div class="row"><dt>Title</dt><dd id="m_title"></dd></div>
+        <div class="row"><dt>Meta description</dt><dd id="m_desc"></dd></div>
+        <div class="row"><dt>H1 count</dt><dd id="m_h1"></dd></div>
+        <div class="row"><dt>Images missing alt</dt><dd id="m_alt"></dd></div>
+        <div class="row"><dt>Word count</dt><dd id="m_words"></dd></div>
+      </dl>
+
+      <div id="fixesBlock">
+        <div class="fixes-head" id="fixesHead">What to fix</div>
+        <ul id="fixes" class="fixes"></ul>
+      </div>
+    </section>
+
+    <footer>
+      <a href="https://digitalheroesco.com" target="_blank" rel="noopener">Built for Digital Heroes Training Task</a>
+    </footer>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const form = $("f"), errBox = $("error"), errMsg = $("errorMsg"),
+          result = $("result"), go = $("go");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errBox.classList.add("hidden");
+      result.classList.add("hidden");
+      result.classList.remove("reveal");
+      go.disabled = true; go.textContent = "Reading…";
+      try {
+        const res = await fetch("/api/audit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: $("url").value }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errMsg.textContent = (data.error && data.error.message) || "Something went wrong.";
+          errBox.classList.remove("hidden");
+        } else {
+          render(data);
+        }
+      } catch (_) {
+        errMsg.textContent = "Couldn't reach the auditor. Check the server is running and try again.";
+        errBox.classList.remove("hidden");
+      } finally {
+        go.disabled = false; go.textContent = "Audit";
+      }
+    });
+
+    function setEmpty(el, value, fallback) {
+      if (value === null || value === undefined || value === "") {
+        el.textContent = fallback; el.classList.add("empty");
+      } else {
+        el.textContent = value; el.classList.remove("empty");
+      }
+    }
+
+    function render(d) {
+      const m = d.metrics, s = d.score;
+
+      result.dataset.grade = s.grade;
+      $("grade").textContent = s.grade;
+      $("overall").textContent = s.overall;
+
+      setEmpty($("m_url"), d.final_url, "—");
+      $("m_status").textContent = m.http_status;
+      $("m_rt").textContent = m.response_time_ms + " ms";
+      setEmpty($("m_title"), m.title, "— none —");
+      setEmpty($("m_desc"), m.meta_description, "— none —");
+      $("m_h1").textContent = m.h1_count;
+      $("m_alt").textContent = m.images_missing_alt + " / " + m.images_total;
+      $("m_words").textContent = m.word_count;
+
+      // meters
+      const b = s.breakdown;
+      $("s_seo").textContent = b.seo;
+      $("s_a11y").textContent = b.accessibility;
+      $("s_perf").textContent = b.performance;
+      $("bar_seo").style.width = "0%";
+      $("bar_a11y").style.width = "0%";
+      $("bar_perf").style.width = "0%";
+
+      // fixes
+      const ul = $("fixes");
+      ul.innerHTML = "";
+      if (!d.fixes.length) {
+        $("fixesHead").textContent = "Diagnosis";
+        const li = document.createElement("li");
+        li.style.gridTemplateColumns = "1fr";
+        li.innerHTML = '<span class="allclear">No issues found — this page passes every check.</span>';
+        ul.appendChild(li);
+      } else {
+        $("fixesHead").textContent = "What to fix";
+        for (const f of d.fixes) {
+          const li = document.createElement("li");
+          const meta = document.createElement("div");
+          meta.className = "fix-meta";
+          const sev = document.createElement("span");
+          sev.className = "sev " + f.severity;
+          sev.textContent = f.severity;
+          const area = document.createElement("span");
+          area.className = "fix-area";
+          area.textContent = f.area;
+          meta.append(sev, area);
+          const msg = document.createElement("span");
+          msg.className = "fix-msg";
+          msg.textContent = f.message;
+          li.append(meta, msg);
+          ul.appendChild(li);
+        }
+      }
+
+      result.classList.remove("hidden");
+      result.classList.add("reveal");
+      // sweep the meters after layout; setTimeout fires even when rAF is throttled
+      setTimeout(() => {
+        $("bar_seo").style.width = b.seo + "%";
+        $("bar_a11y").style.width = b.accessibility + "%";
+        $("bar_perf").style.width = b.performance + "%";
+      }, 40);
+    }
+  </script>
+</body>
+</html>

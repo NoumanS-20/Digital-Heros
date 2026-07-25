@@ -15,5 +15,14 @@ dependencies = [
 	"lxml==5.3.0",
 ]
 
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.setuptools.package-data]
+app = ["static/index.html"]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
