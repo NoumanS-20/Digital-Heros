@@ -7,7 +7,7 @@ approximate word count — plus an opinionated **0–100 health score** and a
 
 Built for the Digital Heroes SDE qualification task.
 
-**Live demo:** <ADD YOUR RENDER URL HERE>
+**Live demo:** <ADD YOUR VERCEL URL HERE>
 
 ## Setup
 
@@ -22,6 +22,15 @@ Run the tests:
 ```bash
 python -m pytest -v
 ```
+
+## Deploy to Vercel
+
+This repo is configured as a single FastAPI app for Vercel.
+
+1. Import the repository into Vercel.
+2. Keep the default Python framework settings.
+3. Deploy with the included `vercel.json` routing all traffic to the FastAPI app.
+4. After the deploy finishes, replace the live demo placeholder above with the Vercel URL.
 
 ## API contract
 
